@@ -18,7 +18,7 @@ class DeployService:
         # 2. [검사] GitHub 주소 파싱 (주소에서 owner랑 repo 이름만 발라내기)
         # 예: https://github.com/taewook/my-app -> taewook, my-app
         try:
-            path_parts = request_data.github_url.path.strip("/").split("/")
+            path_parts = (request_data.github_url.path or "").strip("/").split("/")
             owner, repo_name = path_parts[-2], path_parts[-1]
         except:
             raise HTTPException(status_code=400, detail="잘못된 GitHub URL입니다.")
