@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.database.database import engine, SessionLocal
 from app.models import models
-from app.routers import auth, deploy
+from app.routers import auth, deploy, user
 
 from app.database.seeder import init_plans
 
@@ -53,6 +53,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(auth.router)
 app.include_router(deploy.router)
+app.include_router(user.router)
 
 # Root
 @app.get("/")
