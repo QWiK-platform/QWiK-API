@@ -6,7 +6,7 @@ from app.database.database import engine, SessionLocal
 from app.models import models
 from app.routers import auth, deploy, user, dashboard
 
-from app.database.seeder import init_plans
+from app.database.seeder import init_plans, init_mock_data
 
 from app.core.config import settings
 
@@ -14,10 +14,12 @@ from app.core.config import settings
 models.Base.metadata.create_all(bind=engine)
 
 # DB에 기본 요금제 저장, 이 부분은 추후에 변경 예정
+# DB에 대시보드 더미 데이터 저장
 def init_db():
     db = SessionLocal()
     try:
         init_plans(db)
+        init_mock_data(db)
     finally:
         db.close()
 

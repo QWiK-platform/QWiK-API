@@ -94,14 +94,20 @@ class Project(Base):
     # ERD: domain (도메인 주소)
     domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=True)
     
-    # ERD: status (Active, Inactive)
-    status: Mapped[ProjectStatus] = mapped_column(Enum(ProjectStatus), default=ProjectStatus.ACTIVE)
+    # ERD: status (Boolean)
+    status: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    # ERD: s3 경로
+    s3_path: Mapped[str] = mapped_column(String(255), nullable=True)
     
     # ERD: created_at
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     
     # ERD: status_changed_at
     status_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # ERD: 재배포 일시
+    reload_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationship
     user: Mapped["User"] = Relationship(back_populates="projects_rel")
