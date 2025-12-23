@@ -55,73 +55,56 @@ def init_plans(db: Session):
     db.commit()
     print("요금제 데이터 생성 완료!")
 
-def init_mock_data(db: Session):
+def create_sample_projects_for_user(db: Session, user: User):
     """
-    개발용 더미 데이터 생성 (유저, 프로젝트, 배포 이력 등)
+    로그인한 사용자에게 샘플 프로젝트 붙여주도록 하는 함수
     """
-    # 1. 테스트 유저 확인 (없으면 생성)
-    test_user = db.query(User).filter(User.username == "ta3wook").first()
-    if not test_user:
-        print("🌱 테스트 유저(ta3wook) 생성 중...")
-        test_user = User(
-            username="ta3wook",
-            email="ta3wook@example.com",
-            github_id="ta3wook_gh",
-            plan_id=1  # STARTER
-        )
-        db.add(test_user)
-        db.commit()
-        db.refresh(test_user)
-
-    # 2. 프로젝트 데이터 확인 (이미 있으면 스킵)
-    if db.query(Project).filter(Project.user_id == test_user.user_id).first():
+    # 이미 프로젝트가 있으면 스킵
+    if db.query(Project).filter(Project.user_id == user.user_id).first():
         return
 
-    print("🌱 프로젝트 및 배포 더미 데이터 생성 중...")
+    print(f"🌱 [{user.username}] 샘플 프로젝트 생성 중...")
 
-    # 더미 프로젝트 리스트
+    # 샘플 프로젝트 리스트
     projects_data = [
         {
-            "repo_name": "QWiK-FE",
-            "repo_url": "https://github.com/ta3wook/QWiK-FE",
-            "domain": "qwik-fe.qwik.com",
+            "repo_name": "sample-frontend",
+            "repo_url": f"https://github.com/{user.username}/sample-frontend",
+            "domain": f"{user.username}-fe.qwik.com",
             "status": True,
-            "s3_path": f"projects/{test_user.user_id}/QWiK-FE",
             "storage_used": 240,
             "traffic_used": 1200,
-            "commit_message": "feat: changed layout"
+            "commit_message": "feat: initial project setup"
         },
         {
-            "repo_name": "QWiK-API",
-            "repo_url": "https://github.com/ta3wook/QWiK-API",
-            "domain": "qwik-api.qwik.com",
+            "repo_name": "sample-backend",
+            "repo_url": f"https://github.com/{user.username}/sample-backend",
+            "domain": f"{user.username}-api.qwik.com",
             "status": True,
-            "s3_path": f"projects/{test_user.user_id}/QWiK-API",
             "storage_used": 512,
             "traffic_used": 2400,
-            "commit_message": "fix: database connection pool optimization"
+            "commit_message": "feat: add REST API endpoints"
         },
         {
-            "repo_name": "blog-engine",
-            "repo_url": "https://github.com/ta3wook/blog-engine",
-            "domain": "blog.qwik.com",
+            "repo_name": "sample-blog",
+            "repo_url": f"https://github.com/{user.username}/sample-blog",
+            "domain": f"{user.username}-blog.qwik.com",
             "status": False, # 중지된 프로젝트
-            "s3_path": f"projects/{test_user.user_id}/blog-engine",
             "storage_used": 64,
             "traffic_used": 400,
-            "commit_message": "feat: add markdown editor"
+            "commit_message": "docs: add README"
         }
     ]
 
     for p_data in projects_data:
-        # 프로젝트 생성
+        # 프로젝트 생성 (s3_path는 deployment 생성 후 업데이트)
         project = Project(
-            user_id=test_user.user_id,
+            user_id=user.user_id,
             repo_name=p_data["repo_name"],
             repo_url=p_data["repo_url"],
             domain=p_data["domain"],
             status=p_data["status"],
-            s3_path=p_data["s3_path"],
+            s3_path=None,  # 임시로 None, 배포 생성 후 업데이트
             reload_at=datetime.now() if p_data["status"] else None
         )
         db.add(project)
@@ -144,6 +127,10 @@ def init_mock_data(db: Session):
             created_at=datetime.now()
         )
         db.add(deployment)
+        db.flush()  # deployment_id 생성을 위해 flush
+
+        # s3_path 업데이트: /users/{user_id}/{deployment_id}
+        project.s3_path = f"/users/{user.user_id}/{deployment.deployment_id}"
 
         # (옵션) 이전 배포 이력 추가 (정렬 테스트용)
         old_deployment = Deployment(
@@ -156,4 +143,4 @@ def init_mock_data(db: Session):
         db.add(old_deployment)
 
     db.commit()
-    print("더미 데이터 생성 완료!")
+    print(f"✅ [{user.username}] 샘플 프로젝트 생성 완료!")
