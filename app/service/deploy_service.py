@@ -65,4 +65,5 @@ class DeployService:
 
         self.db.commit()
         
-        return {"status": "success", "message": "배포 요청이 접수되었습니다!", "project_id": new_project.project_id}
+        # return {"status": "success", "message": "배포 요청이 접수되었습니다!", "project_id": new_project.project_id}
+        return {"projectId": 1, "repo_url": "https://test.qw1k.cloud"}

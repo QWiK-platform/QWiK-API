@@ -13,6 +13,10 @@ class DeployRequest(BaseModel):
         return v
 
 # [응답] 성공했을 때 줄 데이터
+# class DeployResponse(BaseModel):
+#     status: str
+#     message: str
+
 class DeployResponse(BaseModel):
-    status: str
-    message: str
+    projectId: int
+    repo_url: HttpUrl
