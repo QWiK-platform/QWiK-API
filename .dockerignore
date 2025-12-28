@@ -2,4 +2,15 @@
 __pycache__
 .git
 venv
+.venv
+app/.venv
 .DS_Store
+*.md
+*.pyc
+*.pyo
+.gitignore
+docker-compose.yaml
+asd.md
+.pytest_cache
+.mypy_cache
+.ruff_cache
