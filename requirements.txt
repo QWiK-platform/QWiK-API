@@ -13,6 +13,6 @@ passlib
 itsdangerous
 
 # 취약점 테스트용 패키지 (CRITICAL/HIGH 취약점 포함)
-Django==2.2.0          # CVE-2019-14234 (CRITICAL - SQL Injection)
-PyYAML==5.1           # CVE-2019-20477 (CRITICAL - Code Execution)
-Pillow==8.1.0          # CVE-2021-25287 (HIGH - Buffer Overflow)
+cryptography==38.0.0   # CVE-2023-23931 (HIGH - Memory corruption)
+certifi==2022.12.7     # CVE-2023-37920 (HIGH - Certificate validation)
+setuptools==65.5.0     # CVE-2024-6345 (HIGH - Code execution)
