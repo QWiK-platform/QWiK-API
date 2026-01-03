@@ -11,6 +11,9 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    env:
+      ECR_REPOSITORY: qwik-api-repo-dev
+      IMAGE_TAG: ${{ github.sha }}
 
     steps:
       - name: Git clone the repository
