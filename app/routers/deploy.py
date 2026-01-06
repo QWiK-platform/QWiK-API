@@ -9,7 +9,7 @@ from app.models.models import User
 
 router = APIRouter(prefix="/deploy", tags=["Deploy"])
 
-@router.post("/", response_model=DeployResponse)
+@router.post("", response_model=DeployResponse)
 async def request_deploy(
     request: DeployRequest, 
     db: Session = Depends(get_db),
