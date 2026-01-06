@@ -59,8 +59,6 @@ app.include_router(deploy.router)
 app.include_router(user.router)
 app.include_router(dashboard.router)
 
-sqs_client = boto3.client("sqs", region_name=settings.AWS_REGION)
-
 # Root
 @app.get("/")
 def read_root():

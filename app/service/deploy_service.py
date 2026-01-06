@@ -1,13 +1,17 @@
 # app/service/deploy_service.py
+import boto3
 import httpx
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models import models
 from app.schemas.deploy import DeployRequest
+from app.core.config import settings
 
 class DeployService:
     def __init__(self, db: Session):
         self.db = db
+        self.sqs = boto3.client("sqs", region_name=settings.AWS_REGION)
+        self.queue_url = settings.SQS_QUEUE_URL
 
     async def create_project_and_deploy(self, user: models.User, request_data: DeployRequest):
         # 1. [검사] 요금제 한도 확인 (프로젝트 개수)
@@ -18,7 +22,7 @@ class DeployService:
         # 2. [검사] GitHub 주소 파싱 (주소에서 owner랑 repo 이름만 발라내기)
         # 예: https://github.com/taewook/my-app -> taewook, my-app
         try:
-            path_parts = (request_data.github_url.path or "").strip("/").split("/")
+            path_parts = (request_data.repo_url.path or "").strip("/").split("/")
             owner, repo_name = path_parts[-2], path_parts[-1]
         except:
             raise HTTPException(status_code=400, detail="잘못된 GitHub URL입니다.")
@@ -42,7 +46,7 @@ class DeployService:
         # 5-1. 프로젝트 생성
         new_project = models.Project(
             user_id=user.user_id,
-            repo_url=str(request_data.github_url),
+            repo_url=str(request_data.repo_url),
             repo_name=repo_name,
             domain=f"{repo_name}.qwik.app", # 임시 도메인 생성
             status=models.ProjectStatus.ACTIVE
@@ -64,6 +68,23 @@ class DeployService:
         self.db.add(new_usage)
 
         self.db.commit()
-        
-        # return {"status": "success", "message": "배포 요청이 접수되었습니다!", "project_id": new_project.project_id}
-        return {"projectId": 1, "repo_url": "https://test.qw1k.cloud"}
+
+        sqs_payload = {
+            "repo_url": request_data.repo_url,  # 요청에서 받음
+            "user_id": str(user.user_id),  # DB/토큰에서 받음
+            "deployment_id": str(new_deployment.deployment_id)  # 방금 DB에 저장하고 받은 ID
+        }
+
+        try:
+            msg_id = sqs.send_message_to_queue(sqs_payload)
+
+            # SQS 전송 성공 시 상태 업데이트
+            new_deployment.status = "QUEUED"
+            self.db.commit()
+
+            return {"projectId": 1, "repo_url": "https://test.qw1k.cloud"}
+
+        except Exception as e:
+            # SQS 전송 실패 시 롤백하거나 상태를 FAILED로 변경
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail="배포 요청 실패")
