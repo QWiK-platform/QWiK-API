@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
+import boto3
+
 from app.database.database import engine, SessionLocal
 from app.models import models
 from app.routers import auth, deploy, user, dashboard
@@ -56,6 +58,8 @@ app.include_router(auth.router)
 app.include_router(deploy.router)
 app.include_router(user.router)
 app.include_router(dashboard.router)
+
+sqs_client = boto3.client("sqs", region_name=settings.AWS_REGION)
 
 # Root
 @app.get("/")
