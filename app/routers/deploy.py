@@ -9,13 +9,18 @@ from app.models.models import User
 
 router = APIRouter(prefix="/deploy", tags=["Deploy"])
 
-@router.post("/", response_model=DeployResponse)
+@router.post("", response_model=DeployResponse, status_code=201)
 async def request_deploy(
-    request: DeployRequest, 
+    request: DeployRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user) #  로그인한 유저만 통과
+    current_user: User = Depends(get_current_user)
 ):
-    # 서비스 실행
+    """
+    새 프로젝트를 생성하고 배포를 요청합니다.
+
+    - GitHub 저장소 URL을 받아 검증
+    - 프로젝트, 배포 기록, 사용량 테이블 생성
+    - SQS에 빌드 작업 요청
+    """
     service = DeployService(db)
-    result = await service.create_project_and_deploy(current_user, request)
-    return result
+    return await service.create_project_and_deploy(current_user, request)

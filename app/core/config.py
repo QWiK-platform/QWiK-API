@@ -1,20 +1,25 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
+class Settings(BaseSettings):
+    SECRET_KEY: str
+    DATABASE_URL: str
 
-class Settings:
-    # JWT 암호화에 사용할 시크릿키
-    SECRET_KEY: str =  os.getenv("SECRET_KEY")
-    # 암호화 알고리즘
+    GITHUB_CLIENT_ID: str
+    GITHUB_CLIENT_SECRET: str
+    GITHUB_REDIRECT_URI: str
+
     ALGORITHM: str = "HS256"
-    # 토큰 유효 기간 (분 단위)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    DATABASE_URL: str = os.getenv("DATABASE_URL")
+    # AWS 리전: 보통 고정해서 쓰므로 기본값 지정 (필요 시 .env로 덮어쓰기 가능)
+    AWS_REGION: str = "ap-northeast-2"
 
-    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID") 
-    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET")
-    GITHUB_REDIRECT_URI: str = os.getenv("GITHUB_REDIRECT_URI")
+    # SQS 대기열 URL: 배포 환경마다 다르므로 필수값으로 설정
+    SQS_QUEUE_URL: str
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8"
+    )
 
 settings = Settings()

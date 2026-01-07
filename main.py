@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
+import boto3
+
 from app.database.database import engine, SessionLocal
 from app.models import models
 from app.routers import auth, deploy, user, dashboard

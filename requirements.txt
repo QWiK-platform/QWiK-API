@@ -11,8 +11,5 @@ psycopg2-binary
 python-multipart
 passlib
 itsdangerous
-
-# 취약점 테스트용 패키지 (CRITICAL/HIGH 취약점 포함)
-cryptography==38.0.0   # CVE-2023-23931 (HIGH - Memory corruption)
-certifi==2022.12.7     # CVE-2023-37920 (HIGH - Certificate validation)
-setuptools==65.5.0     # CVE-2024-6345 (HIGH - Code execution)
+boto3
+pydantic-settings
