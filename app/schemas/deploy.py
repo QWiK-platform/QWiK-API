@@ -3,7 +3,7 @@ from pydantic import BaseModel, HttpUrl, field_validator
 class DeployRequest(BaseModel):
     repo_url: HttpUrl # "https://..." 형식이 아니면 에러 발생
     
-    @field_validator('github_url', mode='after')
+    @field_validator('repo_url', mode='after')
     @classmethod
     def validate_github_url(cls, v: HttpUrl) -> HttpUrl:
         """Ensure github_url.path is a valid string"""

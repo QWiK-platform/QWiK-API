@@ -1,6 +1,7 @@
 # app/service/deploy_service.py
 import boto3
 import httpx
+import json
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models import models
@@ -70,16 +71,19 @@ class DeployService:
         self.db.commit()
 
         sqs_payload = {
-            "repo_url": request_data.repo_url,  # 요청에서 받음
+            "repo_url": str(request_data.repo_url),  # 요청에서 받음
             "user_id": str(user.user_id),  # DB/토큰에서 받음
             "deployment_id": str(new_deployment.deployment_id)  # 방금 DB에 저장하고 받은 ID
         }
 
         try:
-            msg_id = sqs.send_message_to_queue(sqs_payload)
+            self.sqs.send_message(
+                QueueUrl=self.queue_url,
+                MessageBody=json.dumps(sqs_payload)
+            )
 
             # SQS 전송 성공 시 상태 업데이트
-            new_deployment.status = "QUEUED"
+            new_deployment.status = models.DeploymentStatus.QUEUED
             self.db.commit()
 
             return {"projectId": 1, "repo_url": "https://test.qw1k.cloud"}
