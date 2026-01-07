@@ -12,10 +12,10 @@ class DeployRequest(BaseModel):
         return v
 
 class DeployResponse(BaseModel):
-    projectId: int
+    project_id: str
     repo_url: HttpUrl
 
 class SQSPayload(BaseModel):
     repo_url: str
-    user_id: int
-    deployment_id: int
+    user_id: str
+    deployment_id: str

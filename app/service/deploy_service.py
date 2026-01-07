@@ -5,8 +5,9 @@ import json
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
 from app.models import models
-from app.schemas.deploy import DeployRequest
+from app.schemas.deploy import DeployRequest, DeployResponse
 from app.core.config import settings
+from datetime import datetime
 
 class DeployService:
     def __init__(self, db: Session):
@@ -23,7 +24,10 @@ class DeployService:
         # 2. [검사] GitHub 주소 파싱 (주소에서 owner랑 repo 이름만 발라내기)
         # 예: https://github.com/taewook/my-app -> taewook, my-app
         try:
-            path_parts = (request_data.repo_url.path or "").strip("/").split("/")
+            path = (request_data.repo_url.path or "").strip("/")
+            if path.endswith(".git"):
+                path = path[:-4]
+            path_parts = path.split("/")
             owner, repo_name = path_parts[-2], path_parts[-1]
         except:
             raise HTTPException(status_code=400, detail="잘못된 GitHub URL입니다.")
@@ -41,6 +45,17 @@ class DeployService:
             # 4. [검사] 용량 체크 (요금제 스토리지 vs 리포지토리 크기)
             if repo_size_bytes > user.plan.storage:
                 raise HTTPException(status_code=400, detail="리포지토리 용량이 요금제 한도를 초과합니다.")
+            
+            # 4-1. Github 최신 커밋 해시 및 메시지 가져오기
+            default_branch = repo_info.get("default_branch", "main")
+            commit_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo_name}/commits/{default_branch}")
+            
+            last_commit_hash = "latest"
+            last_commit_message = "First deployment"
+            if commit_resp.status_code == 200:
+                commit_data = commit_resp.json()
+                last_commit_hash = commit_data.get("sha", "latest")
+                last_commit_message = commit_data.get("commit", {}).get("message", "First deployment")
 
         # 5. [등록] 모든 검사 통과 DB에 저장 (Active 상태)
         
@@ -49,8 +64,9 @@ class DeployService:
             user_id=user.user_id,
             repo_url=str(request_data.repo_url),
             repo_name=repo_name,
-            domain=f"{repo_name}.qwik.app", # 임시 도메인 생성
-            status=models.ProjectStatus.ACTIVE
+            domain=None, # 워커가 배포 완료 후 업데이트할 거라 초기는 None
+            status=models.ProjectStatus.ACTIVE,
+            created_at=datetime.now()
         )
         self.db.add(new_project)
         self.db.flush() # ID를 미리 받기 위해 flush
@@ -59,16 +75,15 @@ class DeployService:
         new_deployment = models.Deployment(
             project_id=new_project.project_id,
             status=models.DeploymentStatus.QUEUED,
-            commit_hash="latest", # 실제로는 깃허브에서 가져와야 함 (지금은 임시)
-            commit_message="First deployment"
+            commit_hash=last_commit_hash,
+            commit_message=last_commit_message
         )
         self.db.add(new_deployment)
         
         # 5-3. 사용량(Usage) 테이블 초기화
         new_usage = models.Usage(project_id=new_project.project_id)
         self.db.add(new_usage)
-
-        self.db.commit()
+        self.db.flush()
 
         sqs_payload = {
             "repo_url": str(request_data.repo_url),  # 요청에서 받음
@@ -82,13 +97,16 @@ class DeployService:
                 MessageBody=json.dumps(sqs_payload)
             )
 
-            # SQS 전송 성공 시 상태 업데이트
-            new_deployment.status = models.DeploymentStatus.QUEUED
+            # SQS 전송 성공 시 DB commit
+            # 62번 줄에서 QUEUED로 추가하므로 여기서는 성공 시 db commit 하도록
             self.db.commit()
 
-            return {"projectId": 1, "repo_url": "https://test.qw1k.cloud"}
+            return DeployResponse(
+                project_id=str(new_project.project_id),
+                repo_url=request_data.repo_url
+            )
 
         except Exception as e:
             # SQS 전송 실패 시 롤백하거나 상태를 FAILED로 변경
             self.db.rollback()
-            raise HTTPException(status_code=500, detail="배포 요청 실패")
+            raise HTTPException(status_code=500, detail=f"배포 요청 실패: {e}")

@@ -76,24 +76,6 @@ def create_sample_projects_for_user(db: Session, user: User):
             "traffic_used": 1200,
             "commit_message": "feat: initial project setup"
         },
-        {
-            "repo_name": "sample-backend",
-            "repo_url": f"https://github.com/{user.username}/sample-backend",
-            "domain": f"{user.username}-api.qwik.com",
-            "status": True,
-            "storage_used": 512,
-            "traffic_used": 2400,
-            "commit_message": "feat: add REST API endpoints"
-        },
-        {
-            "repo_name": "sample-blog",
-            "repo_url": f"https://github.com/{user.username}/sample-blog",
-            "domain": f"{user.username}-blog.qwik.com",
-            "status": False, # 중지된 프로젝트
-            "storage_used": 64,
-            "traffic_used": 400,
-            "commit_message": "docs: add README"
-        }
     ]
 
     for p_data in projects_data:

@@ -17,5 +17,4 @@ async def request_deploy(
 ):
     # 서비스 실행
     service = DeployService(db)
-    result = await service.create_project_and_deploy(current_user, request)
-    return result
+    return await service.create_project_and_deploy(current_user, request)
