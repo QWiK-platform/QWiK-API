@@ -16,12 +16,7 @@ class DeployService:
         self.queue_url = settings.SQS_QUEUE_URL
 
     async def create_project_and_deploy(self, user: models.User, request_data: DeployRequest):
-        # 1. [검사] 요금제 한도 확인 (프로젝트 개수)
-        # 내 프로젝트 개수 vs 요금제 허용 개수 비교
-        if len(user.projects_rel) >= user.plan.projects:
-            raise HTTPException(status_code=400, detail="요금제의 프로젝트 생성 한도를 초과했습니다.")
-
-        # 2. [검사] GitHub 주소 파싱 (주소에서 owner랑 repo 이름만 발라내기)
+        # 1. [검사] GitHub 주소 파싱 (주소에서 owner랑 repo 이름만 발라내기)
         # 예: https://github.com/taewook/my-app -> taewook, my-app
         try:
             path = (request_data.repo_url.path or "").strip("/")
@@ -32,8 +27,20 @@ class DeployService:
         except:
             raise HTTPException(status_code=400, detail="잘못된 GitHub URL입니다.")
 
-        # 3. [검사] GitHub API로 진짜 존재하는지 & 사이즈 확인
+        # 2. [검사] 이미 존재하는 프로젝트인지 확인
+        existing_project = self.db.query(models.Project).filter(
+            models.Project.user_id == user.user_id,
+            models.Project.repo_name == repo_name
+        ).first()
+
+        # 3. [검사] 요금제 한도 확인 (새 프로젝트인 경우에만)
+        if not existing_project:
+            if len(user.projects_rel) >= user.plan.projects:
+                raise HTTPException(status_code=400, detail="요금제의 프로젝트 생성 한도를 초과했습니다.")
+
+        # 4. [검사] GitHub API로 진짜 존재하는지 & 사이즈 확인
         async with httpx.AsyncClient() as client:
+            # TODO: GitHub API 호출 시 Rate Limit 제한을 피하기 위해 사용자 토큰을 헤더에 추가해야 함
             resp = await client.get(f"https://api.github.com/repos/{owner}/{repo_name}")
             if resp.status_code != 200:
                 raise HTTPException(status_code=404, detail="GitHub 리포지토리를 찾을 수 없습니다 (혹은 비공개입니다).")
@@ -59,31 +66,37 @@ class DeployService:
 
         # 5. [등록] 모든 검사 통과 DB에 저장 (Active 상태)
         
-        # 5-1. 프로젝트 생성
-        new_project = models.Project(
-            user_id=user.user_id,
-            repo_url=str(request_data.repo_url),
-            repo_name=repo_name,
-            domain=None, # 워커가 배포 완료 후 업데이트할 거라 초기는 None
-            status=models.ProjectStatus.ACTIVE,
-            created_at=datetime.now()
-        )
-        self.db.add(new_project)
-        self.db.flush() # ID를 미리 받기 위해 flush
+        if existing_project:
+            project_id = existing_project.project_id
+            existing_project.reload_at = datetime.now()
+        else:
+            # 5-1. 프로젝트 생성
+            new_project = models.Project(
+                user_id=user.user_id,
+                repo_url=str(request_data.repo_url),
+                repo_name=repo_name,
+                domain=None, # 워커가 배포 완료 후 업데이트할 거라 초기는 None
+                status=models.ProjectStatus.ACTIVE,
+                created_at=datetime.now()
+            )
+            self.db.add(new_project)
+            self.db.flush() # ID를 미리 받기 위해 flush
+            project_id = new_project.project_id
+
+            # 5-3. 사용량(Usage) 테이블 초기화 (새 프로젝트일 때만)
+            new_usage = models.Usage(project_id=project_id)
+            self.db.add(new_usage)
+            self.db.flush()
 
         # 5-2. 배포 기록 생성
         new_deployment = models.Deployment(
-            project_id=new_project.project_id,
+            project_id=project_id,
             status=models.DeploymentStatus.QUEUED,
             commit_hash=last_commit_hash,
             commit_message=last_commit_message
         )
         self.db.add(new_deployment)
-        
-        # 5-3. 사용량(Usage) 테이블 초기화
-        new_usage = models.Usage(project_id=new_project.project_id)
-        self.db.add(new_usage)
-        self.db.flush()
+        self.db.flush() # deployment_id 생성을 위해 flush
 
         sqs_payload = {
             "repo_url": str(request_data.repo_url),  # 요청에서 받음
@@ -102,7 +115,7 @@ class DeployService:
             self.db.commit()
 
             return DeployResponse(
-                project_id=str(new_project.project_id),
+                project_id=str(project_id),
                 repo_url=request_data.repo_url
             )
 
