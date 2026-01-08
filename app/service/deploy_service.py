@@ -40,6 +40,10 @@ class DeployService:
         ).first()
 
         # 3. [검사] 요금제 한도 확인 (새 프로젝트인 경우에만)
+        if not user.plan:
+            logger.error(f"User {user.username} has no plan assigned.")
+            raise HTTPException(status_code=500, detail="사용자의 요금제 정보가 설정되지 않았습니다.")
+
         if not existing_project:
             if len(user.projects_rel) >= user.plan.projects:
                 logger.warning(f"Project limit exceeded for user {user.username}")
@@ -48,8 +52,14 @@ class DeployService:
         # 4. [검사] GitHub API로 진짜 존재하는지 & 사이즈 확인
         async with httpx.AsyncClient() as client:
             # TODO: GitHub API 호출 시 Rate Limit 제한을 피하기 위해 사용자 토큰을 헤더에 추가해야 함
+            headers = {}
+            # User 모델에 저장된 토큰 필드명에 맞춰 가져옵니다 (access_token 또는 github_token)
+            token = getattr(user, "access_token", None) or getattr(user, "github_token", None)
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+
             logger.info(f"Verifying GitHub repository: {owner}/{repo_name}")
-            resp = await client.get(f"https://api.github.com/repos/{owner}/{repo_name}")
+            resp = await client.get(f"https://api.github.com/repos/{owner}/{repo_name}", headers=headers)
             if resp.status_code != 200:
                 logger.error(f"GitHub repo not found or inaccessible. Status: {resp.status_code}")
                 raise HTTPException(status_code=404, detail="GitHub 리포지토리를 찾을 수 없습니다 (혹은 비공개입니다).")
@@ -65,7 +75,7 @@ class DeployService:
             
             # 4-1. Github 최신 커밋 해시 및 메시지 가져오기
             default_branch = repo_info.get("default_branch", "main")
-            commit_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo_name}/commits/{default_branch}")
+            commit_resp = await client.get(f"https://api.github.com/repos/{owner}/{repo_name}/commits/{default_branch}", headers=headers)
             
             last_commit_hash = "latest"
             last_commit_message = "First deployment"
@@ -86,7 +96,7 @@ class DeployService:
                 repo_url=str(request_data.repo_url),
                 repo_name=repo_name,
                 domain=None, # 워커가 배포 완료 후 업데이트할 거라 초기는 None
-                status=models.ProjectStatus.ACTIVE,
+                status=True,
                 created_at=datetime.now()
             )
             self.db.add(new_project)
