@@ -89,20 +89,31 @@ class DeployService:
             self.db.flush()
 
         # 5-2. 배포 기록 생성
-        new_deployment = models.Deployment(
-            project_id=project_id,
-            status=models.DeploymentStatus.QUEUED,
-            commit_hash=last_commit_hash,
-            commit_message=last_commit_message
-        )
-        self.db.add(new_deployment)
+        deployment = None
+        if existing_project:
+            deployment = self.db.query(models.Deployment).filter(
+                models.Deployment.project_id == project_id
+            ).order_by(models.Deployment.deployment_id.desc()).first()
+
+        if deployment:
+            deployment.status = models.DeploymentStatus.QUEUED
+            deployment.commit_hash = last_commit_hash
+            deployment.commit_message = last_commit_message
+        else:
+            deployment = models.Deployment(
+                project_id=project_id,
+                status=models.DeploymentStatus.QUEUED,
+                commit_hash=last_commit_hash,
+                commit_message=last_commit_message
+            )
+            self.db.add(deployment)
         self.db.flush() # deployment_id 생성을 위해 flush
 
         sqs_payload = {
             "repo_url": str(request_data.repo_url),  # 요청에서 받음
             "user_id": str(user.user_id),  # DB/토큰에서 받음
             "username": user.username,
-            "deployment_id": str(new_deployment.deployment_id)  # 방금 DB에 저장하고 받은 ID
+            "deployment_id": str(deployment.deployment_id)  # 방금 DB에 저장하고 받은 ID
         }
 
         try:

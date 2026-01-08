@@ -48,6 +48,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,      # 허용할 출처 목록
+    allow_origin_regex="https?://.*", # 모든 도메인/프로토콜 허용 (CORS 에러 방지)
     allow_credentials=True,     # 쿠키/인증정보 포함 허용
     allow_methods=["*"],        # 모든 HTTP 메서드 허용 (GET, POST...)
     allow_headers=["*"],        # 모든 헤더 허용
