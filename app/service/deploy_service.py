@@ -101,6 +101,7 @@ class DeployService:
         sqs_payload = {
             "repo_url": str(request_data.repo_url),  # 요청에서 받음
             "user_id": str(user.user_id),  # DB/토큰에서 받음
+            "username": user.username,
             "deployment_id": str(new_deployment.deployment_id)  # 방금 DB에 저장하고 받은 ID
         }
 
