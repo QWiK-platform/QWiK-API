@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     GITHUB_REDIRECT_URI: str
 
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 6000  # 100 hours
 
     # AWS 리전: 보통 고정해서 쓰므로 기본값 지정 (필요 시 .env로 덮어쓰기 가능)
     AWS_REGION: str = "ap-northeast-2"
