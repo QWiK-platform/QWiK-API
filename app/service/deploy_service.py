@@ -18,6 +18,7 @@ class DeployService:
         self.db = db
         self.sqs = boto3.client("sqs", region_name=settings.AWS_REGION)
         self.s3 = boto3.client("s3", region_name=settings.AWS_REGION)
+        self.kvs = boto3.client("cloudfront-keyvaluestore", region_name=settings.AWS_REGION)
         self.queue_url = settings.SQS_QUEUE_URL
 
     async def create_project_and_deploy(self, user: models.User, request_data: DeployRequest):
@@ -198,7 +199,16 @@ class DeployService:
                 logger.error(f"Failed to delete S3 objects: {e}", exc_info=True)
                 raise HTTPException(status_code=500, detail="리소스 삭제 중 오류가 발생했습니다.")
 
-        # 5. DB에서 프로젝트 삭제 (cascade로 Usage, Deployment, Log 자동 삭제)
+        # 5. KVS에서 도메인 키 삭제
+        if project.domain:
+            try:
+                self._delete_kvs_key(project.domain)
+                logger.info(f"KVS key deleted for project {project_id}: {project.domain}")
+            except Exception as e:
+                logger.error(f"Failed to delete KVS key: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="KVS 키 삭제 중 오류가 발생했습니다.")
+
+        # 6. DB에서 프로젝트 삭제 (cascade로 Usage, Deployment, Log 자동 삭제)
         try:
             self.db.delete(project)
             self.db.commit()
@@ -229,3 +239,18 @@ class DeployService:
                     Bucket=bucket,
                     Delete={"Objects": objects_to_delete}
                 )
+
+    def _delete_kvs_key(self, key: str):
+        """CloudFront KeyValueStore에서 키를 삭제합니다."""
+        kvs_arn = settings.KVS_ARN
+
+        # 현재 ETag 가져오기
+        describe_resp = self.kvs.describe_key_value_store(KvsARN=kvs_arn)
+        etag = describe_resp["ETag"]
+
+        # 키 삭제
+        self.kvs.delete_key(
+            KvsARN=kvs_arn,
+            Key=key,
+            IfMatch=etag
+        )

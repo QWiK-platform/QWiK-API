@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # S3 버킷 이름
     S3_BUCKET_NAME: str
 
+    # CloudFront KeyValueStore ARN
+    KVS_ARN: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8"
