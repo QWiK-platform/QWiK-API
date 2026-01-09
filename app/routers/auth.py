@@ -27,9 +27,8 @@ async def github_login(payload: GitHubLoginRequest, db: Session = Depends(get_db
             json={
                 "client_id": settings.GITHUB_CLIENT_ID,
                 "client_secret": settings.GITHUB_CLIENT_SECRET,
-                "code": payload.code,
-                # 프론트엔드에서 호출한 리다이렉트 URI와 일치해야 함
-                "redirect_uri": "https://qw1k.cloud/auth/callback"
+                "redirect_uri": settings.GITHUB_REDIRECT_URI,
+                "code": payload.code
             }
         )
         
