@@ -213,7 +213,7 @@ class DeployService:
 
         s3_path 형식: users/{USER_ID}/{DEPLOYMENT_ID}
         """
-        bucket = settings.S3_BUCKET
+        bucket = settings.S3_BUCKET_NAME
 
         # prefix 아래의 모든 객체 나열 및 삭제
         paginator = self.s3.get_paginator("list_objects_v2")

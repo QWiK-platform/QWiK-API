@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     SQS_QUEUE_URL: str
 
     # S3 버킷 이름
-    S3_BUCKET: str
+    S3_BUCKET_NAME: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
