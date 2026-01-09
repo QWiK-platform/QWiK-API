@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # SQS 대기열 URL: 배포 환경마다 다르므로 필수값으로 설정
     SQS_QUEUE_URL: str
 
+    # S3 버킷 이름
+    S3_BUCKET: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8"

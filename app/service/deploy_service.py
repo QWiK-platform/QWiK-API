@@ -17,6 +17,7 @@ class DeployService:
     def __init__(self, db: Session):
         self.db = db
         self.sqs = boto3.client("sqs", region_name=settings.AWS_REGION)
+        self.s3 = boto3.client("s3", region_name=settings.AWS_REGION)
         self.queue_url = settings.SQS_QUEUE_URL
 
     async def create_project_and_deploy(self, user: models.User, request_data: DeployRequest):
@@ -158,3 +159,73 @@ class DeployService:
             logger.error(f"Failed to queue deployment: {e}", exc_info=True)
             self.db.rollback()
             raise HTTPException(status_code=500, detail=f"배포 요청 실패: {e}")
+
+    async def delete_project(self, user: models.User, project_id: str):
+        logger.info(f"Delete project request - User: {user.username}, Project ID: {project_id}")
+
+        # 1. 프로젝트 조회
+        project = self.db.query(models.Project).filter(
+            models.Project.project_id == project_id
+        ).first()
+
+        if not project:
+            logger.error(f"Project not found: {project_id}")
+            raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
+
+        # 2. 권한 확인
+        if project.user_id != user.user_id:
+            logger.error(f"Permission denied for user {user.username} on project {project_id}")
+            raise HTTPException(status_code=403, detail="해당 프로젝트에 대한 권한이 없습니다.")
+
+        # 3. 최신 배포 상태 확인 (SUCCESS일 때만 삭제 가능)
+        latest_deployment = self.db.query(models.Deployment).filter(
+            models.Deployment.project_id == project_id
+        ).order_by(models.Deployment.created_at.desc()).first()
+
+        if not latest_deployment or latest_deployment.status != models.DeploymentStatus.SUCCESS:
+            logger.warning(f"Cannot delete project {project_id}: deployment status is not SUCCESS")
+            raise HTTPException(
+                status_code=400,
+                detail="배포가 완료된 프로젝트만 삭제할 수 있습니다."
+            )
+
+        # 4. S3에서 배포 파일 삭제
+        if project.s3_path:
+            try:
+                self._delete_s3_objects(project.s3_path)
+                logger.info(f"S3 objects deleted for project {project_id}")
+            except Exception as e:
+                logger.error(f"Failed to delete S3 objects: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="리소스 삭제 중 오류가 발생했습니다.")
+
+        # 5. DB에서 프로젝트 삭제 (cascade로 Usage, Deployment, Log 자동 삭제)
+        try:
+            self.db.delete(project)
+            self.db.commit()
+            logger.info(f"Project {project_id} deleted successfully")
+        except Exception as e:
+            logger.error(f"Failed to delete project from DB: {e}", exc_info=True)
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail="프로젝트 삭제 중 오류가 발생했습니다.")
+
+    def _delete_s3_objects(self, s3_path: str):
+        """S3 경로 아래의 모든 객체를 삭제합니다.
+
+        s3_path 형식: users/{USER_ID}/{DEPLOYMENT_ID}
+        """
+        bucket = settings.S3_BUCKET
+
+        # prefix 아래의 모든 객체 나열 및 삭제
+        paginator = self.s3.get_paginator("list_objects_v2")
+        pages = paginator.paginate(Bucket=bucket, Prefix=s3_path)
+
+        for page in pages:
+            if "Contents" not in page:
+                continue
+
+            objects_to_delete = [{"Key": obj["Key"]} for obj in page["Contents"]]
+            if objects_to_delete:
+                self.s3.delete_objects(
+                    Bucket=bucket,
+                    Delete={"Objects": objects_to_delete}
+                )
