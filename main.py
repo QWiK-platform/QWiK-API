@@ -6,7 +6,7 @@ import boto3
 
 from app.database.database import engine, SessionLocal
 from app.models import models
-from app.routers import auth, deploy, user, dashboard
+from app.routers import auth, deploy, user, dashboard, project
 
 from app.database.seeder import init_plans
 
@@ -57,6 +57,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(auth.router)
 app.include_router(deploy.router)
+app.include_router(project.router)
 app.include_router(user.router)
 app.include_router(dashboard.router)
 
