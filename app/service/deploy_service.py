@@ -158,3 +158,20 @@ class DeployService:
             logger.error(f"Failed to queue deployment: {e}", exc_info=True)
             self.db.rollback()
             raise HTTPException(status_code=500, detail=f"배포 요청 실패: {e}")
+
+    async def get_deployment_status(self, deployment_id: str, user: models.User):
+        """배포 상태 조회 (Short Polling용)"""
+        deployment = self.db.query(models.Deployment).filter(
+            models.Deployment.deployment_id == deployment_id
+        ).first()
+
+        if not deployment or deployment.project.user_id != user.user_id:
+            raise HTTPException(status_code=404, detail="배포 기록을 찾을 수 없습니다.")
+
+        return {
+            "deployment_id": str(deployment.deployment_id),
+            "project_id": str(deployment.project_id),
+            "status": deployment.status.value,
+            "domain": deployment.project.domain if deployment.status == models.DeploymentStatus.SUCCESS else None,
+            "created_at": deployment.created_at.isoformat()
+        }

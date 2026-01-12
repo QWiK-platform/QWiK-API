@@ -25,3 +25,19 @@ async def request_deploy(
     """
     service = DeployService(db)
     return await service.create_project_and_deploy(current_user, request)
+
+
+@router.get("/poll")
+async def poll_deployment_status(
+    deployment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    배포 상태를 조회합니다. (Short Polling용)
+
+    - SUCCESS 시 domain 반환
+    - FAILED 시 에러 상태 반환
+    """
+    service = DeployService(db)
+    return await service.get_deployment_status(deployment_id, current_user)
