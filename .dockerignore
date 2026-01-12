@@ -1,16 +1,39 @@
+# Environment
 .env
-__pycache__
-.git
-venv
-.venv
-app/.venv
-.DS_Store
-*.md
+.env.example
+
+# Python
+__pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+venv/
+.venv/
+app/.venv/
+
+# Git
+.git/
 .gitignore
-docker-compose.yaml
-asd.md
-.pytest_cache
-.mypy_cache
-.ruff_cache
+.github/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Docker
+Dockerfile*
+docker-compose*.yaml
+
+# Docs
+*.md
+
+# Logs
+*.log

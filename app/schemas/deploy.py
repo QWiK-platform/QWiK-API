@@ -15,6 +15,7 @@ class DeployRequest(BaseModel):
 
 class DeployResponse(BaseModel):
     project_id: str  # UUID를 문자열로 반환
+    deployment_id: str  # UUID를 문자열로 반환
     repo_url: HttpUrl
 
 

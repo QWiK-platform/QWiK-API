@@ -150,6 +150,7 @@ class DeployService:
 
             return DeployResponse(
                 project_id=str(project_id),
+                deployment_id=str(deployment.deployment_id),
                 repo_url=request_data.repo_url
             )
 

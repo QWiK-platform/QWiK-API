@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from app.models.models import User
-from app.database.seeder import create_sample_projects_for_user
 
 class AuthService:
     def __init__(self, db: Session):
@@ -26,8 +25,5 @@ class AuthService:
         self.db.add(new_user)
         self.db.commit()
         self.db.refresh(new_user)
-
-        # 3. 개발 환경에서 샘플 프로젝트 자동 생성
-        create_sample_projects_for_user(self.db, new_user)
 
         return new_user
