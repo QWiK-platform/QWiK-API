@@ -94,8 +94,8 @@ class Project(Base):
     # ERD: domain (도메인 주소)
     domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=True)
     
-    # ERD: status (Active/Inactive)
-    status: Mapped[ProjectStatus] = mapped_column(Enum(ProjectStatus), default=ProjectStatus.ACTIVE)
+    # ERD: status (Boolean)
+    status: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # ERD: s3 경로
     s3_path: Mapped[str] = mapped_column(String(255), nullable=True)
