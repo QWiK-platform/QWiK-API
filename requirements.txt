@@ -13,3 +13,4 @@ passlib
 itsdangerous
 boto3
 pydantic-settings
+botocore[crt]>=1.33.0

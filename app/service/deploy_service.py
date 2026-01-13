@@ -8,7 +8,9 @@ from fastapi import HTTPException
 from app.models import models
 from app.schemas.deploy import DeployRequest, DeployResponse
 from app.core.config import settings
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+KST = timezone(timedelta(hours=9))
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -88,7 +90,7 @@ class DeployService:
         
         if existing_project:
             project_id = existing_project.project_id
-            existing_project.reload_at = datetime.now()
+            existing_project.reload_at = datetime.now(KST)
         else:
             # 5-1. 프로젝트 생성
             new_project = models.Project(
@@ -97,7 +99,7 @@ class DeployService:
                 repo_name=repo_name,
                 domain=None, # 워커가 배포 완료 후 업데이트할 거라 초기는 None
                 status=True,
-                created_at=datetime.now()
+                created_at=datetime.now(KST)
             )
             self.db.add(new_project)
             self.db.flush() # ID를 미리 받기 위해 flush
@@ -150,6 +152,7 @@ class DeployService:
 
             return DeployResponse(
                 project_id=str(project_id),
+                deployment_id=str(deployment.deployment_id),
                 repo_url=request_data.repo_url
             )
 
@@ -158,3 +161,20 @@ class DeployService:
             logger.error(f"Failed to queue deployment: {e}", exc_info=True)
             self.db.rollback()
             raise HTTPException(status_code=500, detail=f"배포 요청 실패: {e}")
+
+    async def get_deployment_status(self, deployment_id: str, user: models.User):
+        """배포 상태 조회 (Short Polling용)"""
+        deployment = self.db.query(models.Deployment).filter(
+            models.Deployment.deployment_id == deployment_id
+        ).first()
+
+        if not deployment or deployment.project.user_id != user.user_id:
+            raise HTTPException(status_code=404, detail="배포 기록을 찾을 수 없습니다.")
+
+        return {
+            "deployment_id": str(deployment.deployment_id),
+            "project_id": str(deployment.project_id),
+            "status": deployment.status.value,
+            "domain": deployment.project.domain if deployment.status == models.DeploymentStatus.SUCCESS else None,
+            "created_at": deployment.created_at.isoformat()
+        }

@@ -55,13 +55,14 @@ def init_plans(db: Session):
     db.commit()
     print("요금제 데이터 생성 완료!")
 
+
 def create_sample_projects_for_user(db: Session, user: User):
     """
     로그인한 사용자에게 샘플 프로젝트 붙여주도록 하는 함수
     """
     # 이미 프로젝트가 있으면 스킵
     if db.query(Project).filter(Project.user_id == user.user_id).first():
-        return
+        return False
 
     print(f"🌱 [{user.username}] 샘플 프로젝트 생성 중...")
 
@@ -86,11 +87,11 @@ def create_sample_projects_for_user(db: Session, user: User):
             repo_url=p_data["repo_url"],
             domain=p_data["domain"],
             status=p_data["status"],
-            s3_path=None,  # 임시로 None, 배포 생성 후 업데이트
+            s3_path=None,
             reload_at=datetime.now() if p_data["status"] else None
         )
         db.add(project)
-        db.flush() # project_id 생성을 위해 flush
+        db.flush()
 
         # 사용량(Usage) 생성
         usage = Usage(
@@ -109,12 +110,12 @@ def create_sample_projects_for_user(db: Session, user: User):
             created_at=datetime.now()
         )
         db.add(deployment)
-        db.flush()  # deployment_id 생성을 위해 flush
+        db.flush()
 
-        # s3_path 업데이트: /users/{user_id}/{deployment_id}
+        # s3_path 업데이트
         project.s3_path = f"/users/{user.user_id}/{deployment.deployment_id}"
 
-        # (옵션) 이전 배포 이력 추가 (정렬 테스트용)
+        # 이전 배포 이력 추가 (정렬 테스트용)
         old_deployment = Deployment(
             project_id=project.project_id,
             status=DeploymentStatus.FAILED,
@@ -126,3 +127,4 @@ def create_sample_projects_for_user(db: Session, user: User):
 
     db.commit()
     print(f"✅ [{user.username}] 샘플 프로젝트 생성 완료!")
+    return True

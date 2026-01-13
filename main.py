@@ -6,7 +6,7 @@ import boto3
 
 from app.database.database import engine, SessionLocal
 from app.models import models
-from app.routers import auth, deploy, user, dashboard
+from app.routers import auth, deploy, user, dashboard, project, dev
 
 from app.database.seeder import init_plans
 
@@ -48,6 +48,7 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,      # 허용할 출처 목록
+    allow_origin_regex="https?://.*", # 모든 도메인/프로토콜 허용 (CORS 에러 방지)
     allow_credentials=True,     # 쿠키/인증정보 포함 허용
     allow_methods=["*"],        # 모든 HTTP 메서드 허용 (GET, POST...)
     allow_headers=["*"],        # 모든 헤더 허용
@@ -56,8 +57,10 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(auth.router)
 app.include_router(deploy.router)
+app.include_router(project.router)
 app.include_router(user.router)
 app.include_router(dashboard.router)
+app.include_router(dev.router)
 
 # Root
 @app.get("/")
