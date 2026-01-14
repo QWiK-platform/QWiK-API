@@ -45,7 +45,7 @@ async def get_dashboard(
             username=current_user.username,
             usage=usage_dto,
             repo_name=project.repo_name,
-            subdomain=project.domain,
+            domain=project.domain,
             status=project.status,
             created_at=project.created_at,
             commit_message=latest_commit_message,

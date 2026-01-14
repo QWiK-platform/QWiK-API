@@ -14,7 +14,7 @@ class ProjectDTO(BaseModel):
     username: str
     usage: Optional[UsageDTO] = None
     repo_name: str
-    subdomain: Optional[str] = None
+    domain: Optional[str] = None
     status: bool
     created_at: datetime
     commit_message: Optional[str] = None
