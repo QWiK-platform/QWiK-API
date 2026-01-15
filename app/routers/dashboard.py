@@ -1,15 +1,27 @@
+from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.models.models import User, Project
 from app.dependencies import get_current_user, get_db
-from app.schemas.dashboard import DashboardResponse, ProjectDTO, UsageDTO
+from app.schemas.dashboard import DashboardResponse, ProjectDTO, UsageDTO, ProjectDetailResponse
+from app.service.dashboard_service import DashboardService
 
 
 router = APIRouter(
     prefix="/dashboard",
     tags=["Dashboard"]
 )
+
+
+@router.get("/{project_id}", response_model=ProjectDetailResponse)
+def get_project_detail(
+    project_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    service = DashboardService(db)
+    return service.get_project_detail(project_id, current_user.user_id)
 
 
 @router.get("", response_model=DashboardResponse)

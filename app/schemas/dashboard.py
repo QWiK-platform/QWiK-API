@@ -24,3 +24,26 @@ class ProjectDTO(BaseModel):
 
 class DashboardResponse(BaseModel):
     projects: List[ProjectDTO]
+
+
+class DeploymentHistoryDTO(BaseModel):
+    build_status: str
+    commit_message: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProjectDetailResponse(BaseModel):
+    project_id: UUID
+    username: str
+    plan_id: int
+    repo_name: str
+    domain: Optional[str]
+    storage_used: int
+    traffic_used: int
+    status: str
+    status_changed_at: datetime
+    history: List[DeploymentHistoryDTO]
+
+    model_config = ConfigDict(from_attributes=True)
