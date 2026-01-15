@@ -15,13 +15,13 @@ router = APIRouter(
 
 
 @router.get("/{project_id}", response_model=ProjectDetailResponse)
-async def get_project_detail(
+def get_project_detail(
     project_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     service = DashboardService(db)
-    return await service.get_project_detail(project_id, current_user.user_id)
+    return service.get_project_detail(project_id, current_user.user_id)
 
 
 @router.get("", response_model=DashboardResponse)
