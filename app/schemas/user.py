@@ -1,6 +1,8 @@
-from pydantic import BaseModel, UUID4, Field
-from typing import Optional
-from app.schemas.plan import PlanResponse # 방금 만든 플랜 양식 가져오기
+from pydantic import BaseModel, UUID4, ConfigDict
+from datetime import date
+
+class UserTermUpdate(BaseModel):
+    terms: date
 
 class UserBase(BaseModel):
     username: str
@@ -8,9 +10,9 @@ class UserBase(BaseModel):
 
 class UserResponse(UserBase):
     user_id: UUID4
-    
-    # DB의 user.plan 객체를 PlanResponse 양식에 맞춰 보여줌
-    plan: PlanResponse 
+    storage_limit: int
+    traffic_limit: int
+    project_limit: int
+    terms: date | None = None  # DB에서 nullable=True이므로
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
