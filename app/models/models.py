@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum as PyEnum
 
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, Boolean, DateTime, Text, ForeignKey, Enum, func
+    Column, String, Integer, BigInteger, Boolean, DateTime, Date, Text, ForeignKey, Enum, func
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Relationship, DeclarativeBase, Mapped, mapped_column
@@ -68,8 +68,8 @@ class User(Base):
     # ERD: email (UQ)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     
-    # ERD: term_version
-    term_version: Mapped[str] = mapped_column(String(10), nullable=True)
+    # ERD: terms (약관 동의일)
+    terms: Mapped[date] = mapped_column(Date, nullable=True)
 
     # Relationship
     plan: Mapped["Plan"] = Relationship(back_populates="users")
