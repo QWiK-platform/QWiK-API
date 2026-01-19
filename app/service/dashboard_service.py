@@ -81,6 +81,7 @@ class DashboardService:
         for d in deployments:
             history_dtos.append(
                 DeploymentHistoryDTO(
+                    deployment_id=d.deployment_id,
                     build_status=d.status.value.lower(), # 소문자로 변환 (e.g., "Failed" -> "failed")
                     commit_message=d.commit_message,
                     created_at=d.created_at

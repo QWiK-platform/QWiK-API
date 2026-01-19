@@ -27,6 +27,7 @@ class DashboardResponse(BaseModel):
 
 
 class DeploymentHistoryDTO(BaseModel):
+    deployment_id: UUID
     build_status: str
     commit_message: Optional[str] = None
     created_at: datetime
