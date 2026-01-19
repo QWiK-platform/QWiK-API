@@ -6,12 +6,49 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from app.models.models import Project, Deployment, User, Usage, Plan, DeploymentStatus
-from app.schemas.dashboard import ProjectDetailResponse, DeploymentHistoryDTO
+from app.schemas.dashboard import (
+    ProjectDetailResponse, DeploymentHistoryDTO, 
+    AllHistoryResponse, GlobalDeploymentHistoryDTO
+)
 
 
 class DashboardService:
     def __init__(self, db: Session):
         self.db = db
+
+    def get_all_history(self, user: User) -> AllHistoryResponse:
+        # User가 소유한 모든 프로젝트의 배포 이력 조회 (최신순 10개, Success/Failed만)
+        results = (
+            self.db.query(Deployment, Project.repo_name)
+            .join(Project, Deployment.project_id == Project.project_id)
+            .filter(
+                Project.user_id == user.user_id,
+                Deployment.status.in_([DeploymentStatus.SUCCESS, DeploymentStatus.FAILED])
+            )
+            .order_by(desc(Deployment.created_at))
+            .limit(10)
+            .all()
+        )
+
+        history_list = []
+        for deployment, repo_name in results:
+            history_list.append(
+                GlobalDeploymentHistoryDTO(
+                    deployment_id=deployment.deployment_id,
+                    project_id=deployment.project_id,
+                    repo_name=repo_name,
+                    status=deployment.status.value.lower(),
+                    commit_message=deployment.commit_message,
+                    created_at=deployment.created_at
+                )
+            )
+
+        return AllHistoryResponse(
+            user_id=user.user_id,
+            username=user.username,
+            email=user.email,
+            history=history_list
+        )
 
     def get_project_detail(self, project_id: UUID, user_id: UUID) -> ProjectDetailResponse:
         # 1. 프로젝트 조회 (User, Usage, Plan 정보 함께 로딩하도록 쿼리 최적화 가능하지만, 여기서는 ORM 관계 활용)
