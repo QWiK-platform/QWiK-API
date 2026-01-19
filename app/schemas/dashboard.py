@@ -47,3 +47,23 @@ class ProjectDetailResponse(BaseModel):
     history: List[DeploymentHistoryDTO]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class GlobalDeploymentHistoryDTO(BaseModel):
+    deployment_id: UUID
+    project_id: UUID
+    repo_name: str
+    status: str
+    commit_message: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AllHistoryResponse(BaseModel):
+    user_id: UUID
+    username: str
+    email: str
+    history: List[GlobalDeploymentHistoryDTO]
+
+    model_config = ConfigDict(from_attributes=True)
