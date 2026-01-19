@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from app.models.models import Project, Deployment, User, Usage, Plan
+from app.models.models import Project, Deployment, User, Usage, Plan, DeploymentStatus
 from app.schemas.dashboard import ProjectDetailResponse, DeploymentHistoryDTO
 
 
@@ -25,13 +25,16 @@ class DashboardService:
         if project.user_id != user_id:
             raise HTTPException(status_code=403, detail="Permission denied")
 
-        # 4. 배포 이력 조회 (최신순 10개)
+        # 4. 배포 이력 조회 (최신순 10개, 완료된 상태만)
         # Relationship을 이용해도 되지만, limit 처리를 위해 별도 쿼리가 효율적일 수 있음
         # 하지만 ORM lazy loading을 활용해서 Python 레벨에서 처리하거나,
         # 쿼리로 명시적으로 가져올 수 있음. 여기서는 명확하게 쿼리 작성.
         deployments = (
             self.db.query(Deployment)
-            .filter(Deployment.project_id == project_id)
+            .filter(
+                Deployment.project_id == project_id,
+                Deployment.status.in_([DeploymentStatus.SUCCESS, DeploymentStatus.FAILED])
+            )
             .order_by(desc(Deployment.created_at))
             .limit(10)
             .all()
