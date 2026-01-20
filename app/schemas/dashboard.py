@@ -27,7 +27,6 @@ class DashboardResponse(BaseModel):
 
 
 class DeploymentHistoryDTO(BaseModel):
-    deployment_id: UUID
     build_status: str
     commit_message: Optional[str] = None
     created_at: datetime
@@ -37,6 +36,7 @@ class DeploymentHistoryDTO(BaseModel):
 
 class ProjectDetailResponse(BaseModel):
     project_id: UUID
+    deployment_id: Optional[UUID] = None
     username: str
     plan_id: int
     repo_name: str

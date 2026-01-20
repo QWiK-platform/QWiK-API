@@ -81,7 +81,6 @@ class DashboardService:
         for d in deployments:
             history_dtos.append(
                 DeploymentHistoryDTO(
-                    deployment_id=d.deployment_id,
                     build_status=d.status.value.lower(), # 소문자로 변환 (e.g., "Failed" -> "failed")
                     commit_message=d.commit_message,
                     created_at=d.created_at
@@ -109,8 +108,11 @@ class DashboardService:
             domain_str = domain_str[:-9]  # Remove last 9 characters (.qwik.com)
 
         # 9. Response 생성
+        latest_deployment_id = deployments[0].deployment_id if deployments else None
+
         return ProjectDetailResponse(
             project_id=project.project_id,
+            deployment_id=latest_deployment_id,
             username=project.user.username if project.user else "",
             plan_id=plan_id,
             repo_name=project.repo_name,
