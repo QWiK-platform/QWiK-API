@@ -110,25 +110,15 @@ class DeployService:
             self.db.add(new_usage)
             self.db.flush()
 
-        # 5-2. 배포 기록 생성
-        deployment = None
-        if existing_project:
-            deployment = self.db.query(models.Deployment).filter(
-                models.Deployment.project_id == project_id
-            ).order_by(models.Deployment.deployment_id.desc()).first()
-
-        if deployment:
-            deployment.status = models.DeploymentStatus.QUEUED
-            deployment.commit_hash = last_commit_hash
-            deployment.commit_message = last_commit_message
-        else:
-            deployment = models.Deployment(
-                project_id=project_id,
-                status=models.DeploymentStatus.QUEUED,
-                commit_hash=last_commit_hash,
-                commit_message=last_commit_message
-            )
-            self.db.add(deployment)
+        # 5-2. 배포 기록 생성 (항상 새로 생성)
+        # 기존 로직: 기존 배포를 찾아 덮어썼으나, 히스토리를 위해 무조건 새로 생성으로 변경
+        deployment = models.Deployment(
+            project_id=project_id,
+            status=models.DeploymentStatus.QUEUED,
+            commit_hash=last_commit_hash,
+            commit_message=last_commit_message
+        )
+        self.db.add(deployment)
         self.db.flush() # deployment_id 생성을 위해 flush
 
         sqs_payload = {
