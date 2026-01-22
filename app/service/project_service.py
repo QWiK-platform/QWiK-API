@@ -33,16 +33,19 @@ class ProjectService:
             logger.error(f"Permission denied for user {user.username} on project {project_id}")
             raise HTTPException(status_code=403, detail="해당 프로젝트에 대한 권한이 없습니다.")
 
-        # 3. 최신 배포 상태 확인 (SUCCESS일 때만 삭제 가능)
+        # 3. 최신 배포 상태 확인 (QUEUED, BUILDING일 때는 삭제 불가)
         latest_deployment = self.db.query(models.Deployment).filter(
             models.Deployment.project_id == project_id
         ).order_by(models.Deployment.created_at.desc()).first()
 
-        if not latest_deployment or latest_deployment.status != models.DeploymentStatus.SUCCESS:
-            logger.warning(f"Cannot delete project {project_id}: deployment status is not SUCCESS")
+        if latest_deployment and latest_deployment.status in [
+            models.DeploymentStatus.QUEUED,
+            models.DeploymentStatus.BUILDING
+        ]:
+            logger.warning(f"Cannot delete project {project_id}: deployment is in progress")
             raise HTTPException(
                 status_code=400,
-                detail="배포가 완료된 프로젝트만 삭제할 수 있습니다."
+                detail="배포가 진행 중인 프로젝트는 삭제할 수 없습니다."
             )
 
         # 4. S3에서 배포 파일 삭제
