@@ -110,3 +110,87 @@ class ProjectService:
             Key=key,
             IfMatch=etag
         )
+
+    def _get_kvs_value(self, key: str) -> str:
+        """
+        CloudFront KeyValueStore에서 Key의 Value 조회
+        """
+        kvs_arn = settings.KVS_ARN
+        response = self.kvs.get_key(KvsARN=kvs_arn, Key=key)
+        return response["Value"]
+
+    def _put_kvs_key(self, key: str, value: str):
+        """
+        CloudFront KeyValueStore에 Key-Value 추가
+        """
+        kvs_arn = settings.KVS_ARN
+
+        # 현재 ETag 가져오기
+        describe_resp = self.kvs.describe_key_value_store(KvsARN=kvs_arn)
+        etag = describe_resp["ETag"]
+
+        # 키 추가
+        self.kvs.put_key(
+            KvsARN=kvs_arn,
+            Key=key,
+            Value=value,
+            IfMatch=etag
+        )
+
+    async def change_domain(self, user: models.User, project_id: str, new_domain: str):
+        """
+        프로젝트 도메인 변경
+        """
+        logger.info(f"Change domain request - User: {user.username}, Project ID: {project_id}, New Domain: {new_domain}")
+
+        # 1. 프로젝트 조회
+        project = self.db.query(models.Project).filter(
+            models.Project.project_id == project_id
+        ).first()
+
+        if not project:
+            logger.error(f"Project not found: {project_id}")
+            raise HTTPException(status_code=404, detail="프로젝트를 찾을 수 없습니다.")
+
+        # 2. 권한 확인
+        if project.user_id != user.user_id:
+            logger.error(f"Permission denied for user {user.username} on project {project_id}")
+            raise HTTPException(status_code=403, detail="해당 프로젝트에 대한 권한이 없습니다.")
+
+        # 3. 도메인 중복 확인 (DB)
+        existing = self.db.query(models.Project).filter(
+            models.Project.domain == new_domain
+        ).first()
+
+        if existing:
+            logger.warning(f"Domain already exists: {new_domain}")
+            raise HTTPException(status_code=409, detail="이미 사용 중인 도메인입니다.")
+
+        old_domain = project.domain
+
+        # 4. KVS 업데이트
+        if old_domain:
+            try:
+                s3_path = self._get_kvs_value(old_domain)
+                self._delete_kvs_key(old_domain)
+                self._put_kvs_key(new_domain, s3_path)
+                logger.info(f"KVS updated: {old_domain} -> {new_domain}")
+            except Exception as e:
+                logger.error(f"Failed to update KVS: {e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="KVS 업데이트 중 오류가 발생했습니다.")
+
+        # 5. DB 업데이트
+        try:
+            project.domain = new_domain
+            self.db.commit()
+            logger.info(f"Domain changed successfully: {old_domain} -> {new_domain}")
+        except Exception as e:
+            logger.error(f"Failed to update domain in DB: {e}", exc_info=True)
+            self.db.rollback()
+            raise HTTPException(status_code=500, detail="도메인 변경 중 오류가 발생했습니다.")
+
+        return {
+            "project_id": project.project_id,
+            "old_domain": old_domain,
+            "new_domain": new_domain
+        }

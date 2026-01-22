@@ -14,7 +14,7 @@ class ProjectDTO(BaseModel):
     username: str
     usage: Optional[UsageDTO] = None
     repo_name: str
-    subdomain: Optional[str] = None
+    domain: Optional[str] = None
     status: bool
     created_at: datetime
     commit_message: Optional[str] = None
@@ -36,6 +36,7 @@ class DeploymentHistoryDTO(BaseModel):
 
 class ProjectDetailResponse(BaseModel):
     project_id: UUID
+    deployment_id: Optional[UUID] = None
     username: str
     plan_id: int
     repo_name: str

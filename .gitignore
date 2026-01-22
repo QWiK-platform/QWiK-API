@@ -62,3 +62,6 @@ Thumbs.db
 *.pid
 instance/
 .webassets-cache
+
+# ETC
+CLAUDE.md
