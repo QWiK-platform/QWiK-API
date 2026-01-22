@@ -125,6 +125,7 @@ class DeployService:
             "repo_url": str(request_data.repo_url),  # 요청에서 받음
             "user_id": str(user.user_id),  # DB/토큰에서 받음
             "username": user.username,
+            "project_id": str(project_id),  # 프로젝트 ID 추가
             "deployment_id": str(deployment.deployment_id)  # 방금 DB에 저장하고 받은 ID
         }
 
