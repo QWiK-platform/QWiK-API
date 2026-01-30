@@ -58,10 +58,13 @@ async def get_dashboard(
             latest_commit_message = latest.commit_message
             latest_reload_at = latest.created_at
         
-        # 3. 사용량 정보 매핑
+        # 3. 사용량 정보 매핑 (Bytes -> MB 변환)
         usage_dto = None
         if project.usage:
-            usage_dto = UsageDTO.model_validate(project.usage)
+            usage_dto = UsageDTO(
+                storage_used=project.usage.storage_used // (1024 * 1024),
+                traffic_used=project.usage.traffic_used // (1024 * 1024)
+            )
 
         # 4. DTO 생성
         project_dto = ProjectDTO(
